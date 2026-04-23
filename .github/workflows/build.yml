@@ -1,0 +1,38 @@
+name: Build OpenWrt
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update feeds
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Config
+        run: |
+          make defconfig
+          echo "
+  CONFIG_TARGET_ipq60xx=y
+  CONFIG_TARGET_ipq60xx_DEVICE_xiaomi_mi-router-ax3000=y
+  " > .config
+
+      - name: Download
+        run: make download -j$(nproc)
+
+      - name: Build
+        run: make -j$(nproc) || make -j1 V=s
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openwrt
+          path: bin/targets/ipq60xx/*
